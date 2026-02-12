@@ -14,7 +14,7 @@ data = None
 user_id = st.number_input(
     "Select a user ID",
     min_value=1,
-    max_value=6000,
+    max_value=600000,
     value=1,
     step=1
 )
@@ -36,17 +36,18 @@ if st.session_state.recommendations is not None:
     st.success(f"Recommendations generated in {data['latency_ms']} ms")
 
     st.subheader("Recommended Movies (IDs)")
-    for i, movie_id in enumerate(data["recommendations"], start=1):
+    for i, movie in enumerate(data["recommendations"], start=1):
         col1, col2 = st.columns([3, 1])
-        col1.write(f"{i}. Movie ID: {movie_id}")
+        col1.write(f"{i}. Movie ID: {movie}")
 
         if col2.button(
             "I watched this",
-            key=f"watch_{movie_id}"
+            key=f"watch_{movie['movie_id']}"
         ):
             feedback = {
                 "user_id": user_id,
-                "movie_id": movie_id
+                "movie_id": movie["movie_id"],
+                "experiment_group": data["experiment_group"]
             }
 
             r = requests.post(
@@ -55,7 +56,7 @@ if st.session_state.recommendations is not None:
             )
 
             if r.status_code == 200:
-                st.success(f"Feedback sent for movie {movie_id}")
+                st.success(f"Feedback sent for movie {movie['movie_id']}")
             else:
                 st.error("Failed to send feedback")
 
