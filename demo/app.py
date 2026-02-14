@@ -19,16 +19,23 @@ user_id = st.number_input(
     step=1
 )
 
-API_URL = "http://127.0.0.1:8000/recommend"
+API_URL = "https://shxz7-recommendation-engine.hf.space/recommend"
 
 if st.button("Get Recommendations"):
     with st.spinner("Fetching recommendations..."):
-        response = requests.get(f"{API_URL}/{user_id}")
+        try:
+            response = requests.get(f"{API_URL}/{user_id}", timeout=30)
 
-        if response.status_code == 200:
-            st.session_state.recommendations = response.json()
-        else:
-            st.error("Failed to fetch recommendations")
+            if response.status_code == 200:
+                st.session_state.recommendations = response.json()
+            else:
+                st.error(f"Failed to fetch recommendations. Status code: {response.status_code}")
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Cannot connect to backend API. Please ensure the Hugging Face Space is running.")
+        except requests.exceptions.Timeout:
+            st.error("⏱️ Request timed out. The backend may be starting up or overloaded.")
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
 
 # Only run this AFTER data exists
 if st.session_state.recommendations is not None:
@@ -50,15 +57,19 @@ if st.session_state.recommendations is not None:
                 "experiment_group": data["experiment_group"]
             }
 
-            r = requests.post(
-                "http://127.0.0.1:8000/feedback",
-                json=feedback
-            )
+            try:
+                r = requests.post(
+                    "https://shxz7-recommendation-engine.hf.space/feedback",
+                    json=feedback,
+                    timeout=30
+                )
 
-            if r.status_code == 200:
-                st.success(f"Feedback sent for movie {movie['movie_id']}")
-            else:
-                st.error("Failed to send feedback")
+                if r.status_code == 200:
+                    st.success(f"Feedback sent for movie {movie['movie_id']}")
+                else:
+                    st.error("Failed to send feedback")
+            except Exception as e:
+                st.error(f"Error sending feedback: {str(e)}")
 
     with st.expander("Show raw API response"):
         st.json(data)
